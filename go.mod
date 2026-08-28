@@ -1,4 +1,4 @@
-module github.com/tomschlick/terraform-provider-cycle
+module github.com/grailpay/terraform-provider-cycle
 
 go 1.26.5
 

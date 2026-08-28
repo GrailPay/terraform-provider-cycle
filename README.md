@@ -16,7 +16,7 @@ Built with the [Terraform Plugin Framework](https://developer.hashicorp.com/terr
 terraform {
   required_providers {
     cycle = {
-      source  = "tomschlick/cycle"
+      source  = "grailpay/cycle"
       version = "~> 0.1"
     }
   }
@@ -78,7 +78,7 @@ To test a local build without publishing, add a `dev_overrides` block to `~/.ter
 ```hcl
 provider_installation {
   dev_overrides {
-    "tomschlick/cycle" = "/path/to/your/go/bin" # output of: go env GOPATH, plus /bin
+    "grailpay/cycle" = "/path/to/your/go/bin" # output of: go env GOPATH, plus /bin
   }
   direct {}
 }
@@ -114,10 +114,10 @@ make docs
 
 One-time setup, then every release is just a git tag.
 
-1. **Create the GitHub repo** `tomschlick/terraform-provider-cycle` with `master` as the default branch, and push this repo to it:
+1. **Create the GitHub repo** `grailpay/terraform-provider-cycle` with `master` as the default branch, and push this repo to it:
 
    ```sh
-   git remote add origin git@github.com:tomschlick/terraform-provider-cycle.git
+   git remote add origin git@github.com:grailpay/terraform-provider-cycle.git
    git push -u origin master
    ```
 
@@ -140,7 +140,7 @@ One-time setup, then every release is just a git tag.
    git push origin v0.1.0
    ```
 
-5. **Publish on the registry** (first release only): sign in to [registry.terraform.io](https://registry.terraform.io) with GitHub, go to *Publish → Provider*, select `tomschlick/terraform-provider-cycle`, and upload the GPG **public** key. The registry ingests the tagged release automatically; subsequent tags appear without further manual steps.
+5. **Publish on the registry** (first release only): sign in to [registry.terraform.io](https://registry.terraform.io) with GitHub, go to *Publish → Provider*, select `grailpay/terraform-provider-cycle`, and upload the GPG **public** key. The registry ingests the tagged release automatically; subsequent tags appear without further manual steps.
 
 > [!NOTE]
 > The registry requires the repository to contain an open source license file (most providers use MPL-2.0). Add a `LICENSE` file before publishing if one is not present.

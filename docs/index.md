@@ -15,7 +15,7 @@ Interact with the cycle.io platform.
 terraform {
   required_providers {
     cycle = {
-      source  = "tomschlick/cycle"
+      source  = "grailpay/cycle"
       version = "~> 0.1"
     }
   }

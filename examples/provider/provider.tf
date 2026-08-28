@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     cycle = {
-      source  = "tomschlick/cycle"
+      source  = "grailpay/cycle"
       version = "~> 0.1"
     }
   }

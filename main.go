@@ -6,7 +6,7 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
-	"github.com/tomschlick/terraform-provider-cycle/internal/provider"
+	"github.com/grailpay/terraform-provider-cycle/internal/provider"
 )
 
 // version is set at build time by GoReleaser via -ldflags.
@@ -18,7 +18,7 @@ func main() {
 	flag.Parse()
 
 	opts := providerserver.ServeOpts{
-		Address: "registry.terraform.io/tomschlick/cycle",
+		Address: "registry.terraform.io/grailpay/cycle",
 		Debug:   debug,
 	}
 
