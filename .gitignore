@@ -1,0 +1,23 @@
+# Binaries
+terraform-provider-cycle
+dist/
+*.exe
+*.test
+
+# Go
+vendor/
+*.out
+
+# Terraform (local provider dev / examples)
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+crash.log
+*.tfvars
+!*.auto.tfvars.example
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
