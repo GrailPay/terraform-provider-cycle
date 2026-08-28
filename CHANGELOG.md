@@ -1,13 +1,20 @@
 # Changelog
 
-## 0.1.1 (Unreleased)
+## 0.1.2 (Unreleased)
+
+`cycle_server.tags` is now read-only. Cycle assigns its own constraint tags
+after provision (`aws`, `aws-us-east-1`, …). The previous empty-list default
+made Terraform plan `[]` and then reject those API tags as an inconsistent
+apply result.
+
+## 0.1.1
 
 When Cycle deletes a finished job, `GET /v1/jobs/{id}` starts 404ing. Create
 now treats that as success and resolves the new server from the cluster list
 (matching location, model, and zone). Other resources treat a missing job as
 completed instead of failing the apply.
 
-## 0.1.0 (Unreleased)
+## 0.1.0
 
 Initial release.
 

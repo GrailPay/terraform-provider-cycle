@@ -31,8 +31,6 @@ resource "cycle_server" "worker" {
 
   nickname     = "worker-1"
   force_delete = false
-
-  tags = ["workers"]
 }
 ```
 
@@ -53,7 +51,6 @@ resource "cycle_server" "worker" {
 - `force_delete` (Boolean) When `true`, force-delete the server even if container instances are still running on it. Used only on destroy. Defaults to `false`.
 - `nickname` (String) A custom display name for the server. Does not affect the server hostname.
 - `reservation_id` (String) A provider reservation ID to consume when provisioning a reserved server. Changing this forces a new server to be created.
-- `tags` (List of String) Server constraint tags. Containers can target these tags when scheduling.
 - `zone` (String) Availability zone for providers that support zone selection. Changing this forces a new server to be created.
 
 ### Read-Only
@@ -63,6 +60,7 @@ resource "cycle_server" "worker" {
 - `id` (String) The unique ID of the server.
 - `ips` (List of String) IP addresses assigned to the server during provisioning (`provider.init_ips`). Empty if the provider has not reported any yet.
 - `state` (String) The current state of the server (e.g. `provisioning`, `live`, `deleting`).
+- `tags` (List of String) Constraint tags assigned by Cycle after provision (provider, location, and model). The API overwrites user-supplied tags, so this attribute is read-only.
 
 ## Import
 

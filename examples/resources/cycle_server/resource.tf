@@ -16,6 +16,4 @@ resource "cycle_server" "worker" {
 
   nickname     = "worker-1"
   force_delete = false
-
-  tags = ["workers"]
 }
