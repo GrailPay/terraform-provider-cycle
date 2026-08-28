@@ -122,30 +122,15 @@ func (d *dnsZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest
 func (d *dnsZoneDataSource) findZoneByOrigin(ctx context.Context, origin string) (*cycle.DnsZone, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	pageSize := float32(100)
-	for pageNumber := float32(1); ; pageNumber++ {
-		number := pageNumber
-		size := pageSize
-		apiResp, err := d.client.Client.GetDNSZonesWithResponse(ctx, &cycle.GetDNSZonesParams{
-			Page: &cycle.PageParam{Number: &number, Size: &size},
-		})
-		if err != nil {
-			diags.AddError("Error listing DNS zones", err.Error())
-			return nil, diags
-		}
-		if apiResp.JSON200 == nil {
-			addAPIError(&diags, "listing DNS zones", apiResp.StatusCode(), apiResp.JSONDefault)
-			return nil, diags
-		}
+	zones, err := fetchAllDNSZones(ctx, d.client)
+	if err != nil {
+		diags.AddError("Error listing DNS zones", err.Error())
+		return nil, diags
+	}
 
-		for i := range apiResp.JSON200.Data {
-			if apiResp.JSON200.Data[i].Origin == origin {
-				return &apiResp.JSON200.Data[i], diags
-			}
-		}
-
-		if len(apiResp.JSON200.Data) < int(pageSize) {
-			break
+	for i := range zones {
+		if zones[i].Origin == origin {
+			return &zones[i], diags
 		}
 	}
 

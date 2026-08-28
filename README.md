@@ -78,17 +78,19 @@ Provider configuration:
 ## Data Sources
 
 - `cycle_hub` — the current hub
-- `cycle_cluster`, `cycle_environment`, `cycle_environments`
-- `cycle_dns_zone`
-- `cycle_image`, `cycle_images`, `cycle_image_source`
+- `cycle_cluster`, `cycle_clusters`, `cycle_environment`, `cycle_environments`, `cycle_environment_deployments`
+- `cycle_dns_zone`, `cycle_dns_zones`, `cycle_dns_records`
+- `cycle_image`, `cycle_images`, `cycle_image_source`, `cycle_image_sources`
 - `cycle_hub_roles`, `cycle_hub_members`
 - `cycle_load_balancer`
 - `cycle_server`, `cycle_servers`
-- `cycle_ip_pool`, `cycle_ip_pools`
+- `cycle_ip_pool`, `cycle_ip_pools`, `cycle_pool_ips`
 - `cycle_external_volume`, `cycle_autoscale_group`
 - `cycle_provider_locations`, `cycle_provider_server_models`
 - `cycle_pipeline`, `cycle_pipelines`
-- `cycle_stack`, `cycle_stacks`
+- `cycle_stack`, `cycle_stacks`, `cycle_stack_build`, `cycle_stack_builds`
+- `cycle_scoped_variable`, `cycle_scoped_variables`
+- `cycle_vpn`, `cycle_vpn_users`
 - `cycle_integration`, `cycle_integrations`, `cycle_available_integrations`
 - `cycle_api_keys`
 - `cycle_container`, `cycle_containers`

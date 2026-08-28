@@ -1,5 +1,5 @@
-# List every IP pool in the hub. The API reports available/total counts
-# only — it does not enumerate individual addresses.
+# List every IP pool in the hub. Counts only — use cycle_pool_ips
+# to enumerate individual addresses in a pool.
 data "cycle_ip_pools" "all" {}
 
 output "available_ips" {

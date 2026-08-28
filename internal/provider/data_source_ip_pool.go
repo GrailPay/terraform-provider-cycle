@@ -54,8 +54,8 @@ func (d *ipPoolDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 	}
 
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Looks up a Cycle IP pool by ID. The API reports available/total IP counts only; " +
-			"it does not enumerate individual addresses.",
+		MarkdownDescription: "Looks up a Cycle IP pool by ID. This data source reports available/total IP counts; " +
+			"use `cycle_pool_ips` to enumerate individual addresses.",
 		Attributes: attrs,
 	}
 }

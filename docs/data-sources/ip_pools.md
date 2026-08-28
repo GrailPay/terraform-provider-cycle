@@ -3,18 +3,18 @@
 page_title: "cycle_ip_pools Data Source - cycle"
 subcategory: ""
 description: |-
-  Lists Cycle IP pools in the hub. The API reports available/total IP counts only; it does not enumerate individual addresses.
+  Lists Cycle IP pools in the hub. This data source reports available/total IP counts; use cycle_pool_ips to enumerate individual addresses in a pool.
 ---
 
 # cycle_ip_pools (Data Source)
 
-Lists Cycle IP pools in the hub. The API reports available/total IP counts only; it does not enumerate individual addresses.
+Lists Cycle IP pools in the hub. This data source reports available/total IP counts; use `cycle_pool_ips` to enumerate individual addresses in a pool.
 
 ## Example Usage
 
 ```terraform
-# List every IP pool in the hub. The API reports available/total counts
-# only — it does not enumerate individual addresses.
+# List every IP pool in the hub. Counts only — use cycle_pool_ips
+# to enumerate individual addresses in a pool.
 data "cycle_ip_pools" "all" {}
 
 output "available_ips" {

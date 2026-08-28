@@ -3,12 +3,12 @@
 page_title: "cycle_ip_pool Data Source - cycle"
 subcategory: ""
 description: |-
-  Looks up a Cycle IP pool by ID. The API reports available/total IP counts only; it does not enumerate individual addresses.
+  Looks up a Cycle IP pool by ID. This data source reports available/total IP counts; use cycle_pool_ips to enumerate individual addresses.
 ---
 
 # cycle_ip_pool (Data Source)
 
-Looks up a Cycle IP pool by ID. The API reports available/total IP counts only; it does not enumerate individual addresses.
+Looks up a Cycle IP pool by ID. This data source reports available/total IP counts; use `cycle_pool_ips` to enumerate individual addresses.
 
 ## Example Usage
 

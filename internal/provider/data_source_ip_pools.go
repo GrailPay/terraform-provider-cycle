@@ -50,8 +50,8 @@ func (d *ipPoolsDataSource) Metadata(_ context.Context, req datasource.MetadataR
 
 func (d *ipPoolsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Lists Cycle IP pools in the hub. The API reports available/total IP counts only; " +
-			"it does not enumerate individual addresses.",
+		MarkdownDescription: "Lists Cycle IP pools in the hub. This data source reports available/total IP counts; " +
+			"use `cycle_pool_ips` to enumerate individual addresses in a pool.",
 		Attributes: map[string]schema.Attribute{
 			"ip_pools": schema.ListNestedAttribute{
 				Computed:            true,
