@@ -1,6 +1,6 @@
 # Terraform Provider for Cycle.io
 
-A Terraform provider for [Cycle.io](https://cycle.io), the LowOps platform for containers and infrastructure. Manage clusters, environments, scoped variables, DNS, image sources, hub membership, environment services, infrastructure, pipelines, and stacks as code.
+A Terraform provider for [Cycle.io](https://cycle.io), the LowOps platform for containers and infrastructure. Manage clusters, environments, containers, scoped variables, DNS, image sources, hub membership, integrations, environment services, infrastructure, pipelines, and stacks as code.
 
 Built with the [Terraform Plugin Framework](https://developer.hashicorp.com/terraform/plugin/framework) (protocol version 6) on top of Cycle's official [Go API client](https://github.com/cycleplatform/api-client-go).
 
@@ -66,6 +66,14 @@ Provider configuration:
 - `cycle_pipeline_trigger_key` — pipeline trigger keys (secret is computed + sensitive)
 - `cycle_stack` — stacks from a git repo or raw spec
 - `cycle_stack_build` — create a stack build and wait until it is live
+- `cycle_integration` — hub integrations (vendor auth + extra, secrets preserved)
+- `cycle_api_key` — hub API keys (secret is computed + sensitive)
+- `cycle_container` — containers (`config` as JSON; optional `start_on_create`)
+- `cycle_discovery_service` — environment discovery service (reconfigure singleton)
+- `cycle_gateway_service` — environment gateway service (reconfigure singleton)
+- `cycle_scheduler_service` — environment scheduler service (reconfigure singleton)
+- `cycle_network` — SDN networks
+- `cycle_tls_certificate` — user-supplied TLS certificates (destroy deprecates)
 
 ## Data Sources
 
@@ -81,6 +89,11 @@ Provider configuration:
 - `cycle_provider_locations`, `cycle_provider_server_models`
 - `cycle_pipeline`, `cycle_pipelines`
 - `cycle_stack`, `cycle_stacks`
+- `cycle_integration`, `cycle_integrations`, `cycle_available_integrations`
+- `cycle_api_keys`
+- `cycle_container`, `cycle_containers`
+- `cycle_network`, `cycle_networks`
+- `cycle_tls_certificates`
 
 Full documentation for every resource and data source lives in [`docs/`](docs/) and is rendered on the Terraform Registry once published.
 
