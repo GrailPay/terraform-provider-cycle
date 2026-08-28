@@ -5,6 +5,9 @@ resource "cycle_scoped_variable" "api_token" {
   identifier     = "API_TOKEN"
   value          = var.api_token
 
+  # Obfuscates the value on the Cycle dashboard.
+  secret = {}
+
   access = {
     env_variable = {
       key = "API_TOKEN"

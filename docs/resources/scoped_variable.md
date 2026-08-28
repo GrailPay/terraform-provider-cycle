@@ -20,6 +20,9 @@ resource "cycle_scoped_variable" "api_token" {
   identifier     = "API_TOKEN"
   value          = var.api_token
 
+  # Obfuscates the value on the Cycle dashboard.
+  secret = {}
+
   access = {
     env_variable = {
       key = "API_TOKEN"
@@ -63,6 +66,7 @@ resource "cycle_scoped_variable" "tls_cert" {
 
 - `access` (Attributes) Controls how the scoped variable is exposed to containers. At least one of `env_variable`, `internal_api`, or `file` should be set. (see [below for nested schema](#nestedatt--access))
 - `scope` (Attributes) Controls which containers in the environment the variable is assigned to. If omitted, the variable is assigned globally to all current and future containers in the environment. (see [below for nested schema](#nestedatt--scope))
+- `secret` (Attributes) Marks the variable as a secret. Secret values are obfuscated on the Cycle dashboard and require uncovering to view. (see [below for nested schema](#nestedatt--secret))
 
 ### Read-Only
 
@@ -112,6 +116,18 @@ Optional:
 - `container_identifiers` (List of String) A list of container identifiers that have access to this scoped variable.
 - `container_ids` (List of String) A list of container IDs that have access to this scoped variable.
 - `global` (Boolean) When `true`, the variable is assigned to all current and future containers in the environment. Defaults to `false` when the `scope` block is specified explicitly.
+
+
+<a id="nestedatt--secret"></a>
+### Nested Schema for `secret`
+
+Optional:
+
+- `hint` (String) A user-specified hint suggesting what the encryption key might be, for values encrypted via the Cycle portal.
+
+Read-Only:
+
+- `iv` (String) The IV hex associated with the encryption of the variable. Only set when the value was encrypted via the Cycle portal's encrypt option; the provider never sets this.
 
 ## Import
 

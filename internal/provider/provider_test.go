@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
+	"github.com/grailpay/terraform-provider-cycle/internal/provider"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
-	"github.com/grailpay/terraform-provider-cycle/internal/provider"
 )
 
 // TestProviderSchema starts the provider server in-process and asks it for

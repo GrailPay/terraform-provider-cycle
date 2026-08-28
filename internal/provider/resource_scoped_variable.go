@@ -44,9 +44,15 @@ type scopedVariableResourceModel struct {
 	EnvironmentID types.String               `tfsdk:"environment_id"`
 	Identifier    types.String               `tfsdk:"identifier"`
 	Value         types.String               `tfsdk:"value"`
+	Secret        *scopedVariableSecretModel `tfsdk:"secret"`
 	Scope         *scopedVariableScopeModel  `tfsdk:"scope"`
 	Access        *scopedVariableAccessModel `tfsdk:"access"`
 	HubID         types.String               `tfsdk:"hub_id"`
+}
+
+type scopedVariableSecretModel struct {
+	Hint types.String `tfsdk:"hint"`
+	IV   types.String `tfsdk:"iv"`
 }
 
 type scopedVariableScopeModel struct {
@@ -106,6 +112,23 @@ func (r *scopedVariableResource) Schema(_ context.Context, _ resource.SchemaRequ
 				Required:            true,
 				Sensitive:           true,
 				MarkdownDescription: "The raw value of the scoped variable.",
+			},
+			"secret": schema.SingleNestedAttribute{
+				Optional:            true,
+				MarkdownDescription: "Marks the variable as a secret. Secret values are obfuscated on the Cycle dashboard and require uncovering to view.",
+				Attributes: map[string]schema.Attribute{
+					"hint": schema.StringAttribute{
+						Optional:            true,
+						MarkdownDescription: "A user-specified hint suggesting what the encryption key might be, for values encrypted via the Cycle portal.",
+					},
+					"iv": schema.StringAttribute{
+						Computed:            true,
+						MarkdownDescription: "The IV hex associated with the encryption of the variable. Only set when the value was encrypted via the Cycle portal's encrypt option; the provider never sets this.",
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
+					},
+				},
 			},
 			"scope": schema.SingleNestedAttribute{
 				Optional:            true,
@@ -216,7 +239,7 @@ func (r *scopedVariableResource) Create(ctx context.Context, req resource.Create
 	}
 
 	var source cycle.CreateScopedVariableJSONBody_Source
-	if err := source.FromRawSource(scopedVariableRawSource(plan.Value.ValueString())); err != nil {
+	if err := source.FromRawSource(scopedVariableRawSource(plan.Value.ValueString(), plan.Secret)); err != nil {
 		resp.Diagnostics.AddError("Error building scoped variable source", err.Error())
 		return
 	}
@@ -292,7 +315,7 @@ func (r *scopedVariableResource) Update(ctx context.Context, req resource.Update
 	}
 
 	var source cycle.UpdateScopedVariableJSONBody_Source
-	if err := source.FromRawSource(scopedVariableRawSource(plan.Value.ValueString())); err != nil {
+	if err := source.FromRawSource(scopedVariableRawSource(plan.Value.ValueString(), plan.Secret)); err != nil {
 		resp.Diagnostics.AddError("Error building scoped variable source", err.Error())
 		return
 	}
@@ -369,11 +392,28 @@ func (r *scopedVariableResource) ImportState(ctx context.Context, req resource.I
 
 // scopedVariableRawSource builds the raw (static value) source payload shared
 // by create and update.
-func scopedVariableRawSource(value string) cycle.RawSource {
+func scopedVariableRawSource(value string, secret *scopedVariableSecretModel) cycle.RawSource {
 	var raw cycle.RawSource
 	raw.Type = cycle.RawSourceTypeRaw
 	raw.Details.Value = value
 	raw.Details.Blob = strings.Contains(value, "\n")
+	if secret != nil {
+		s := &struct {
+			Hint *string `json:"hint,omitempty"`
+			Iv   *string `json:"iv,omitempty"`
+		}{}
+		if !secret.Hint.IsNull() && !secret.Hint.IsUnknown() {
+			hint := secret.Hint.ValueString()
+			s.Hint = &hint
+		}
+		// Preserve an IV set by portal-side encryption across updates. On
+		// create the IV is unknown (computed) and is never sent.
+		if !secret.IV.IsNull() && !secret.IV.IsUnknown() {
+			iv := secret.IV.ValueString()
+			s.Iv = &iv
+		}
+		raw.Details.Secret = s
+	}
 	return raw
 }
 
@@ -457,6 +497,21 @@ func scopedVariableModelFromAPI(ctx context.Context, model *scopedVariableResour
 		if discriminator, err := sv.Source.Discriminator(); err == nil && discriminator == string(cycle.RawSourceTypeRaw) {
 			if raw, err := sv.Source.AsRawSource(); err == nil {
 				model.Value = types.StringValue(raw.Details.Value)
+				if raw.Details.Secret != nil {
+					secret := &scopedVariableSecretModel{
+						Hint: types.StringNull(),
+						IV:   types.StringNull(),
+					}
+					if raw.Details.Secret.Hint != nil {
+						secret.Hint = types.StringValue(*raw.Details.Secret.Hint)
+					}
+					if raw.Details.Secret.Iv != nil {
+						secret.IV = types.StringValue(*raw.Details.Secret.Iv)
+					}
+					model.Secret = secret
+				} else {
+					model.Secret = nil
+				}
 			}
 		}
 	}

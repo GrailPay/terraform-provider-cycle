@@ -4,10 +4,10 @@ import (
 	"os"
 	"testing"
 
+	"github.com/grailpay/terraform-provider-cycle/internal/provider"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/grailpay/terraform-provider-cycle/internal/provider"
 )
 
 // rolesUsersProviderFactories is the provider factory map shared by the
