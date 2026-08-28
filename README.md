@@ -1,6 +1,6 @@
 # Terraform Provider for Cycle.io
 
-A Terraform provider for [Cycle.io](https://cycle.io), the LowOps platform for containers and infrastructure. Manage clusters, environments, scoped variables, DNS, image sources, and hub membership as code.
+A Terraform provider for [Cycle.io](https://cycle.io), the LowOps platform for containers and infrastructure. Manage clusters, environments, scoped variables, DNS, image sources, hub membership, environment services, infrastructure, pipelines, and stacks as code.
 
 Built with the [Terraform Plugin Framework](https://developer.hashicorp.com/terraform/plugin/framework) (protocol version 6) on top of Cycle's official [Go API client](https://github.com/cycleplatform/api-client-go).
 
@@ -55,6 +55,17 @@ Provider configuration:
 - `cycle_hub_role` — custom hub roles with capabilities
 - `cycle_hub_invite` — invite users to the hub by email
 - `cycle_hub_member` — manage an existing hub member's role
+- `cycle_hub_webhooks` — hub `server_deployed` / `server_deleted` webhook URLs
+- `cycle_load_balancer` — environment load balancer service (reconfigure singleton)
+- `cycle_vpn` — environment VPN service (reconfigure singleton)
+- `cycle_vpn_user` — VPN accounts for an environment
+- `cycle_server` — provision a server into a cluster
+- `cycle_external_volume` — external volumes
+- `cycle_autoscale_group` — auto-scale groups
+- `cycle_pipeline` — pipelines (`stages` as JSON)
+- `cycle_pipeline_trigger_key` — pipeline trigger keys (secret is computed + sensitive)
+- `cycle_stack` — stacks from a git repo or raw spec
+- `cycle_stack_build` — create a stack build and wait until it is live
 
 ## Data Sources
 
@@ -63,6 +74,13 @@ Provider configuration:
 - `cycle_dns_zone`
 - `cycle_image`, `cycle_images`, `cycle_image_source`
 - `cycle_hub_roles`, `cycle_hub_members`
+- `cycle_load_balancer`
+- `cycle_server`, `cycle_servers`
+- `cycle_ip_pool`, `cycle_ip_pools`
+- `cycle_external_volume`, `cycle_autoscale_group`
+- `cycle_provider_locations`, `cycle_provider_server_models`
+- `cycle_pipeline`, `cycle_pipelines`
+- `cycle_stack`, `cycle_stacks`
 
 Full documentation for every resource and data source lives in [`docs/`](docs/) and is rendered on the Terraform Registry once published.
 
