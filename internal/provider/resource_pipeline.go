@@ -286,7 +286,7 @@ func (r *pipelineResource) Delete(ctx context.Context, req resource.DeleteReques
 	// even though some Cycle docs describe this as HTTP 202.
 	if deleteResp.JSON200 != nil {
 		if job := deleteResp.JSON200.Data.Job; job != nil {
-			if _, err := waitForJob(ctx, r.client, job.Id); err != nil {
+			if err := waitForJobIgnoreMissing(ctx, r.client, job.Id); err != nil {
 				resp.Diagnostics.AddError("Error waiting for pipeline deletion", err.Error())
 			}
 		}

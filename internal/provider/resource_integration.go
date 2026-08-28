@@ -290,7 +290,7 @@ func (r *integrationResource) Delete(ctx context.Context, req resource.DeleteReq
 		return
 	}
 	if job := deleteResp.JSON202.Data.Job; job != nil {
-		if _, err := waitForJob(ctx, r.client, job.Id); err != nil {
+		if err := waitForJobIgnoreMissing(ctx, r.client, job.Id); err != nil {
 			resp.Diagnostics.AddError("Error waiting for integration deletion", err.Error())
 		}
 	}

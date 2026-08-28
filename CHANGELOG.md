@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1 (Unreleased)
+
+When Cycle deletes a finished job, `GET /v1/jobs/{id}` starts 404ing. Create
+now treats that as success and resolves the new server from the cluster list
+(matching location, model, and zone). Other resources treat a missing job as
+completed instead of failing the apply.
+
 ## 0.1.0 (Unreleased)
 
 Initial release.

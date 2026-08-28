@@ -358,7 +358,7 @@ func (r *containerResource) Delete(ctx context.Context, req resource.DeleteReque
 		return
 	}
 	if job := deleteResp.JSON202.Data.Job; job != nil {
-		if _, err := waitForJob(ctx, r.client, job.Id); err != nil {
+		if err := waitForJobIgnoreMissing(ctx, r.client, job.Id); err != nil {
 			resp.Diagnostics.AddError("Error waiting for container deletion", err.Error())
 		}
 	}
@@ -401,7 +401,7 @@ func startContainerJob(ctx context.Context, client *CycleClient, containerID str
 		return false
 	}
 	if job := jobResp.JSON202.Data.Job; job != nil {
-		if _, err := waitForJob(ctx, client, job.Id); err != nil {
+		if err := waitForJobIgnoreMissing(ctx, client, job.Id); err != nil {
 			diags.AddError("Error waiting for container start", err.Error())
 			return false
 		}

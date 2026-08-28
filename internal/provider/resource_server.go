@@ -241,14 +241,9 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	job, err := waitForJob(ctx, r.client, createResp.JSON202.Data.Job.Id)
+	serverID, err := resolveServerAfterProvisionJob(ctx, r.client, job, err, plan)
 	if err != nil {
 		resp.Diagnostics.AddError("Error waiting for server provision", err.Error())
-		return
-	}
-
-	serverID, err := resolveProvisionedServerID(ctx, r.client, job, plan)
-	if err != nil {
-		resp.Diagnostics.AddError("Error resolving provisioned server ID", err.Error())
 		return
 	}
 
@@ -388,7 +383,7 @@ func (r *serverResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 	if jobID != "" {
-		if _, err := waitForJob(ctx, r.client, jobID); err != nil {
+		if err := waitForJobIgnoreMissing(ctx, r.client, jobID); err != nil {
 			resp.Diagnostics.AddError("Error waiting for server deletion", err.Error())
 		}
 	}
@@ -563,6 +558,11 @@ func resolveProvisionedServerID(ctx context.Context, client *CycleClient, job *c
 		srv := &servers[i]
 		if srv.LocationId != plan.LocationID.ValueString() || srv.ModelId != plan.ModelID.ValueString() {
 			continue
+		}
+		if !plan.Zone.IsNull() && !plan.Zone.IsUnknown() {
+			if srv.Provider.Zone == nil || *srv.Provider.Zone != plan.Zone.ValueString() {
+				continue
+			}
 		}
 		if srv.State.Current == cycle.ServerStateCurrentDeleted || srv.State.Current == cycle.ServerStateCurrentDeleting {
 			continue

@@ -568,7 +568,7 @@ func (r *dnsRecordResource) Delete(ctx context.Context, req resource.DeleteReque
 
 	// Record deletion may spawn an async job (e.g. certificate cleanup).
 	if data := apiResp.JSON202.Data; data != nil && data.Job != nil {
-		if _, err := waitForJob(ctx, r.client, data.Job.Id); err != nil {
+		if err := waitForJobIgnoreMissing(ctx, r.client, data.Job.Id); err != nil {
 			resp.Diagnostics.AddError("Error waiting for DNS record deletion", err.Error())
 		}
 	}
