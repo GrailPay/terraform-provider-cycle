@@ -185,7 +185,7 @@ func (r *dnsZoneResource) Delete(ctx context.Context, req resource.DeleteRequest
 	// Zone deletion is asynchronous; wait for the job so dependent resources
 	// (e.g. re-creating the same origin) don't race the deletion.
 	if job := apiResp.JSON202.Data.Job; job != nil {
-		if _, err := waitForJob(ctx, r.client, job.Id); err != nil {
+		if err := waitForJobIgnoreMissing(ctx, r.client, job.Id); err != nil {
 			resp.Diagnostics.AddError("Error waiting for DNS zone deletion", err.Error())
 		}
 	}

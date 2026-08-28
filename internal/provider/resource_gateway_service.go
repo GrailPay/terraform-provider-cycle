@@ -228,7 +228,7 @@ func (r *gatewayServiceResource) reconfigureGatewayService(ctx context.Context, 
 		return false
 	}
 	if job := apiResp.JSON202.Data.Job; job != nil {
-		if _, err := waitForJob(ctx, r.client, job.Id); err != nil {
+		if err := waitForJobIgnoreMissing(ctx, r.client, job.Id); err != nil {
 			diags.AddError("Error waiting for gateway service reconfigure", err.Error())
 			return false
 		}

@@ -265,7 +265,7 @@ func (r *vpnResource) reconfigureVPN(ctx context.Context, model vpnResourceModel
 		return false
 	}
 	if job := apiResp.JSON202.Data.Job; job != nil {
-		if _, err := waitForJob(ctx, r.client, job.Id); err != nil {
+		if err := waitForJobIgnoreMissing(ctx, r.client, job.Id); err != nil {
 			diags.AddError("Error waiting for VPN reconfigure", err.Error())
 			return false
 		}

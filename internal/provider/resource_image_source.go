@@ -431,7 +431,7 @@ func (r *imageSourceResource) Delete(ctx context.Context, req resource.DeleteReq
 	// Image source deletion is asynchronous (images built from the source are
 	// cleaned up too); wait so downstream destroys don't race it.
 	if job := apiResp.JSON202.Data.Job; job != nil {
-		if _, err := waitForJob(ctx, r.client, job.Id); err != nil {
+		if err := waitForJobIgnoreMissing(ctx, r.client, job.Id); err != nil {
 			resp.Diagnostics.AddError("Error waiting for image source deletion", err.Error())
 		}
 	}

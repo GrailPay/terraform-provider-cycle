@@ -261,7 +261,7 @@ func (r *stackBuildResource) Delete(ctx context.Context, req resource.DeleteRequ
 	// Generated client maps a successful delete to JSON200 (JobDescriptor).
 	if deleteResp.JSON200 != nil {
 		if job := deleteResp.JSON200.Data.Job; job != nil {
-			if _, err := waitForJob(ctx, r.client, job.Id); err != nil {
+			if err := waitForJobIgnoreMissing(ctx, r.client, job.Id); err != nil {
 				resp.Diagnostics.AddError("Error waiting for stack build deletion", err.Error())
 			}
 		}
