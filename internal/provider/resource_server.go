@@ -8,7 +8,6 @@ import (
 	"regexp"
 
 	cycle "github.com/cycleplatform/api-client-go"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -16,7 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -67,8 +66,6 @@ func (r *serverResource) Metadata(_ context.Context, req resource.MetadataReques
 }
 
 func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	emptyStringList := types.ListValueMust(types.StringType, []attr.Value{})
-
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Provisions a Cycle server into a cluster via `POST /v1/infrastructure/servers`. " +
 			"Provisioning and deletion are asynchronous jobs; Terraform waits for each job to finish. " +
@@ -148,11 +145,12 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				MarkdownDescription: "A custom display name for the server. Does not affect the server hostname.",
 			},
 			"tags": schema.ListAttribute{
-				Optional:            true,
 				Computed:            true,
 				ElementType:         types.StringType,
-				Default:             listdefault.StaticValue(emptyStringList),
-				MarkdownDescription: "Server constraint tags. Containers can target these tags when scheduling.",
+				MarkdownDescription: "Constraint tags assigned by Cycle after provision (provider, location, and model). The API overwrites user-supplied tags, so this attribute is read-only.",
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"hostname": schema.StringAttribute{
 				Computed:            true,
@@ -262,9 +260,9 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	if !plan.Nickname.IsNull() && !plan.Nickname.IsUnknown() || serverTagsConfigured(plan) {
+	if !plan.Nickname.IsNull() && !plan.Nickname.IsUnknown() {
 		if err := applyServerUpdate(ctx, r.client, serverID, plan, &resp.Diagnostics); err != nil {
-			resp.Diagnostics.AddError("Error applying server nickname/tags after create", err.Error())
+			resp.Diagnostics.AddError("Error applying server nickname after create", err.Error())
 			return
 		}
 		if resp.Diagnostics.HasError() {
@@ -447,10 +445,6 @@ func serverAdvancedFromPlan(plan serverResourceModel) *struct {
 	}{ProvisionOptions: opts, Zone: zone}
 }
 
-func serverTagsConfigured(plan serverResourceModel) bool {
-	return !plan.Tags.IsNull() && !plan.Tags.IsUnknown() && len(plan.Tags.Elements()) > 0
-}
-
 func applyServerUpdate(ctx context.Context, client *CycleClient, serverID string, plan serverResourceModel, diags *diag.Diagnostics) error {
 	getResp, err := client.Client.GetServerWithResponse(ctx, serverID, &cycle.GetServerParams{})
 	if err != nil {
@@ -473,17 +467,6 @@ func applyServerUpdate(ctx context.Context, client *CycleClient, serverID string
 		OvercommitMultiple: current.Constraints.Allow.OvercommitMultiple,
 		Pool:               current.Constraints.Allow.Pool,
 		Services:           current.Constraints.Allow.Services,
-	}
-	if !plan.Tags.IsNull() && !plan.Tags.IsUnknown() {
-		var tags []string
-		diags.Append(plan.Tags.ElementsAs(ctx, &tags, false)...)
-		if diags.HasError() {
-			return nil
-		}
-		if tags == nil {
-			tags = []string{}
-		}
-		body.Constraints.Tags = &tags
 	}
 	if !plan.Nickname.IsNull() && !plan.Nickname.IsUnknown() {
 		nickname := plan.Nickname.ValueString()
