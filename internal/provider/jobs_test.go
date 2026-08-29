@@ -94,11 +94,42 @@ func TestWaitForJob404AfterRunningIsJobNotFound(t *testing.T) {
 	if !errors.Is(err, ErrJobNotFound) {
 		t.Fatalf("err = %v, want ErrJobNotFound", err)
 	}
-	if job != nil {
-		t.Fatalf("job = %+v, want nil", job)
+	if job == nil || job.Id != "6a91e91282ea716853c1e0cf" {
+		t.Fatalf("job = %+v, want the last seen job", job)
 	}
 	if polls.Load() != 2 {
 		t.Fatalf("polls = %d, want 2 (do not keep retrying 404 after the job was seen)", polls.Load())
+	}
+}
+
+func TestWaitForJob404AfterRunningKeepsServerID(t *testing.T) {
+	withJobPolling(t, time.Millisecond, 10)
+
+	var polls atomic.Int32
+	client := testCycleClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := polls.Add(1)
+		if n == 1 {
+			writeJSON(w, http.StatusOK, map[string]any{
+				"data": jobPayload("6a91e91282ea716853c1e0cf", "running", map[string]string{
+					"server_id": "6a91e911a985dde810c41b5c",
+				}),
+			})
+			return
+		}
+		writeJSON(w, http.StatusNotFound, map[string]any{
+			"error": map[string]any{"title": "unable to find job", "code": "404.job"},
+		})
+	}))
+
+	job, err := waitForJob(context.Background(), client, "6a91e91282ea716853c1e0cf")
+	if err != nil {
+		t.Fatalf("waitForJob: %v", err)
+	}
+	if got := serverIDFromJob(job); got != "6a91e911a985dde810c41b5c" {
+		t.Fatalf("serverIDFromJob = %q", got)
+	}
+	if polls.Load() != 2 {
+		t.Fatalf("polls = %d, want 2", polls.Load())
 	}
 }
 
@@ -162,7 +193,29 @@ func TestResolveServerAfterProvisionJobRecoversFromGoneJob(t *testing.T) {
 		t.Fatalf("resolveServerAfterProvisionJob: %v", err)
 	}
 	if id != "6a91e911bbbbbbbbbbbbbbbb" {
-		t.Fatalf("id = %q, want the newest matching server", id)
+		t.Fatalf("id = %q, want the unique zone match", id)
+	}
+}
+
+func TestResolveProvisionedServerIDErrorsWhenAmbiguous(t *testing.T) {
+	client := testCycleClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"data": []any{
+				serverPayload("6a91e911aaaaaaaaaaaaaaaa", "production", "loc-1", "model-new", "us-east-1a", "2026-08-28T20:10:00Z"),
+				serverPayload("6a91e911bbbbbbbbbbbbbbbb", "production", "loc-1", "model-new", "us-east-1b", "2026-08-28T20:12:00Z"),
+			},
+		})
+	}))
+
+	plan := serverResourceModel{
+		Cluster:    types.StringValue("production"),
+		LocationID: types.StringValue("loc-1"),
+		ModelID:    types.StringValue("model-new"),
+	}
+
+	_, err := resolveProvisionedServerID(context.Background(), client, nil, plan)
+	if err == nil {
+		t.Fatal("expected error when multiple servers match and the job has no id")
 	}
 }
 

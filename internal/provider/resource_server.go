@@ -524,7 +524,9 @@ func serverResourceModelFromAPI(ctx context.Context, model *serverResourceModel,
 
 // resolveProvisionedServerID finds the server created by a provision job.
 // It prefers a 24-character hex id in job.Tasks[i].Output, then falls back to
-// listing servers in the cluster and picking the newest match on location/model.
+// listing servers in the cluster. The list fallback only succeeds when exactly
+// one live server matches location/model/zone — picking the newest of several
+// would attach parallel creates to the same node.
 func resolveProvisionedServerID(ctx context.Context, client *CycleClient, job *cycle.Job, plan serverResourceModel) (string, error) {
 	if id := serverIDFromJob(job); id != "" {
 		return id, nil
@@ -536,13 +538,13 @@ func resolveProvisionedServerID(ctx context.Context, client *CycleClient, job *c
 		return "", fmt.Errorf("listing servers after provision job: %w", err)
 	}
 
-	var match *cycle.Server
+	var matches []cycle.Server
 	for i := range servers {
 		srv := &servers[i]
 		if srv.LocationId != plan.LocationID.ValueString() || srv.ModelId != plan.ModelID.ValueString() {
 			continue
 		}
-		if !plan.Zone.IsNull() && !plan.Zone.IsUnknown() {
+		if !plan.Zone.IsNull() && !plan.Zone.IsUnknown() && plan.Zone.ValueString() != "" {
 			if srv.Provider.Zone == nil || *srv.Provider.Zone != plan.Zone.ValueString() {
 				continue
 			}
@@ -550,15 +552,18 @@ func resolveProvisionedServerID(ctx context.Context, client *CycleClient, job *c
 		if srv.State.Current == cycle.ServerStateCurrentDeleted || srv.State.Current == cycle.ServerStateCurrentDeleting {
 			continue
 		}
-		if match == nil || srv.Events.Created.After(match.Events.Created) {
-			match = srv
-		}
+		matches = append(matches, *srv)
 	}
-	if match == nil {
+	switch len(matches) {
+	case 1:
+		return matches[0].Id, nil
+	case 0:
 		return "", fmt.Errorf("provision job completed but no server matching cluster %q, location %q, model %q was found, and the job output did not include a server id",
 			plan.Cluster.ValueString(), plan.LocationID.ValueString(), plan.ModelID.ValueString())
+	default:
+		return "", fmt.Errorf("provision job did not include a server id, and %d servers match cluster %q, location %q, model %q; refusing to guess which one this create owns",
+			len(matches), plan.Cluster.ValueString(), plan.LocationID.ValueString(), plan.ModelID.ValueString())
 	}
-	return match.Id, nil
 }
 
 func serverIDFromJob(job *cycle.Job) string {

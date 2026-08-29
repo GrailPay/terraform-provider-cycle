@@ -1,6 +1,13 @@
 # Changelog
 
-## 0.1.2 (Unreleased)
+## 0.1.3 (Unreleased)
+
+When a provision job is garbage-collected, `cycle_server` no longer attaches
+every parallel create to the newest matching node. It keeps a server id from
+the last seen job output when present, and the cluster-list fallback only
+succeeds if exactly one live server matches.
+
+## 0.1.2
 
 `cycle_server.tags` is now read-only. Cycle assigns its own constraint tags
 after provision (`aws`, `aws-us-east-1`, …). The previous empty-list default
