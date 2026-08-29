@@ -37,31 +37,44 @@ func waitForJob(ctx context.Context, client *CycleClient, jobID string) (*cycle.
 	defer ticker.Stop()
 
 	notFound := 0
-	seen := false
+	var last cycle.Job
+	haveLast := false
 	for {
 		resp, err := client.Client.GetJobWithResponse(ctx, jobID)
 		if err != nil {
 			return nil, fmt.Errorf("polling job %s: %w", jobID, err)
 		}
 		if resp.StatusCode() == http.StatusNotFound {
-			if seen || notFound+1 >= jobNotFoundLimit {
-				return nil, fmt.Errorf("%w: %s", ErrJobNotFound, jobID)
+			if haveLast {
+				// Cycle GC'd the job after we saw it. If task output already
+				// named the server, treat that as success instead of guessing
+				// from the cluster list (parallel creates share location/model).
+				if serverIDFromJob(&last) != "" {
+					copied := last
+					return &copied, nil
+				}
+				copied := last
+				return &copied, fmt.Errorf("%w: %s", ErrJobNotFound, jobID)
 			}
 			notFound++
+			if notFound >= jobNotFoundLimit {
+				return nil, fmt.Errorf("%w: %s", ErrJobNotFound, jobID)
+			}
 		} else {
 			notFound = 0
 			if resp.JSON200 == nil {
 				return nil, apiError(fmt.Sprintf("polling job %s", jobID), resp.StatusCode(), resp.JSONDefault)
 			}
 
-			job := resp.JSON200.Data
-			seen = true
-			switch job.State.Current {
+			last = resp.JSON200.Data
+			haveLast = true
+			switch last.State.Current {
 			case cycle.JobStateCurrentCompleted:
-				return &job, nil
+				copied := last
+				return &copied, nil
 			case cycle.JobStateCurrentError, cycle.JobStateCurrentExpired:
 				return nil, fmt.Errorf("job %s (%s) finished in state %q: %s",
-					jobID, job.Caption, job.State.Current, jobErrorDetail(job))
+					jobID, last.Caption, last.State.Current, jobErrorDetail(last))
 			}
 		}
 
