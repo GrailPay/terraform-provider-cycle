@@ -3,7 +3,7 @@ module github.com/grailpay/terraform-provider-cycle
 go 1.26.5
 
 require (
-	github.com/cycleplatform/api-client-go v0.7.1
+	github.com/cycleplatform/api-client-go v0.7.2
 	github.com/hashicorp/terraform-plugin-framework v1.19.0
 	github.com/hashicorp/terraform-plugin-framework-jsontypes v0.2.0
 	github.com/hashicorp/terraform-plugin-framework-validators v0.19.0
