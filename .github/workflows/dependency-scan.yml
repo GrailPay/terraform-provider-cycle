@@ -1,0 +1,22 @@
+name: Dependency Scan
+
+on:
+  schedule:
+    # 13:00 and 01:00 UTC. About 8am/8pm Eastern during EST, 9am/9pm during EDT.
+    - cron: '0 13 * * *'
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Log Linear changes without writing them
+        type: boolean
+        default: false
+
+jobs:
+  scan:
+    permissions:
+      contents: read
+    uses: GrailPay/.github/.github/workflows/dependency-scan.yml@master
+    with:
+      dry_run: ${{ inputs.dry_run || false }}
+    secrets: inherit
