@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	cycle "github.com/cycleplatform/api-client-go"
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -44,8 +45,21 @@ type autoscaleGroupResourceModel struct {
 	Cluster        types.String                        `tfsdk:"cluster"`
 	Infrastructure []autoscaleGroupInfrastructureModel `tfsdk:"infrastructure"`
 	Scale          *autoscaleGroupScaleModel           `tfsdk:"scale"`
+	Provision      *autoscaleGroupProvisionModel       `tfsdk:"provision"`
 	HubID          types.String                        `tfsdk:"hub_id"`
 	State          types.String                        `tfsdk:"state"`
+}
+
+// autoscaleGroupProvisionModel is the constraint set Cycle applies to servers
+// this group creates. encrypt_storage is not part of the group API.
+type autoscaleGroupProvisionModel struct {
+	Overcommit         types.Bool  `tfsdk:"overcommit"`
+	OvercommitMultiple types.Int64 `tfsdk:"overcommit_multiple"`
+	Pool               types.Bool  `tfsdk:"pool"`
+	Services           types.Bool  `tfsdk:"services"`
+	Tags               types.List  `tfsdk:"tags"`
+	BaseVolumeGb       types.Int64 `tfsdk:"base_volume_gb"`
+	Sftp               types.Bool  `tfsdk:"sftp"`
 }
 
 type autoscaleGroupInfrastructureModel struct {
@@ -85,7 +99,8 @@ func (r *autoscaleGroupResource) Schema(_ context.Context, _ resource.SchemaRequ
 
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a Cycle auto-scale group (`POST /v1/infrastructure/auto-scale/groups`). " +
-			"The group describes which server models and locations Cycle may provision from, and the scale-up / scale-down bounds.",
+			"The group describes which server models and locations Cycle may provision from, the scale-up / scale-down bounds, " +
+			"and the placement constraints (including CPU overcommit) applied to servers the group creates.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
@@ -186,6 +201,50 @@ func (r *autoscaleGroupResource) Schema(_ context.Context, _ resource.SchemaRequ
 								MarkdownDescription: "Minimum time-to-live for a server provisioned by an autoscale event.",
 							},
 						},
+					},
+				},
+			},
+			"provision": schema.SingleNestedAttribute{
+				Optional: true,
+				MarkdownDescription: "Constraints and features Cycle applies to each server this group creates. " +
+					"Omitted, the group does not send provision constraints. Cycle has no encrypt_storage field on a group.",
+				Attributes: map[string]schema.Attribute{
+					"overcommit": schema.BoolAttribute{
+						Required:            true,
+						MarkdownDescription: "Allow containers to reserve more CPU shares than the server has physical threads. One thread is 10 shares.",
+					},
+					"overcommit_multiple": schema.Int64Attribute{
+						Optional:            true,
+						MarkdownDescription: "How many times the server's CPU shares may be reserved. Cycle requires `overcommit` to be true when this is set. `15` allows 15× the physical shares.",
+						Validators: []validator.Int64{
+							int64validator.AtLeast(1),
+						},
+					},
+					"pool": schema.BoolAttribute{
+						Required:            true,
+						MarkdownDescription: "Allow containers that specify no deployment tags to be placed on servers this group creates.",
+					},
+					"services": schema.BoolAttribute{
+						Required:            true,
+						MarkdownDescription: "Allow environment service containers (discovery, load balancer, scheduler) to be placed on servers this group creates.",
+					},
+					"tags": schema.ListAttribute{
+						Optional:            true,
+						Computed:            true,
+						ElementType:         types.StringType,
+						Default:             listdefault.StaticValue(emptyStringList),
+						MarkdownDescription: "Constraint tags Cycle puts on servers this group creates. An empty list sends no extra tags. Cycle may still add provider tags such as `aws` after provision.",
+					},
+					"base_volume_gb": schema.Int64Attribute{
+						Optional:            true,
+						MarkdownDescription: "Size in GB of the base volume where Cycle stores container images. Omit to leave Cycle's default.",
+						Validators: []validator.Int64{
+							int64validator.AtLeast(1),
+						},
+					},
+					"sftp": schema.BoolAttribute{
+						Optional:            true,
+						MarkdownDescription: "Accept incoming SFTP connections through the remote volume integration. Sent only when `base_volume_gb` or `sftp` is set.",
 					},
 				},
 			},
@@ -395,6 +454,14 @@ func autoscaleGroupPlanToAPI(ctx context.Context, plan autoscaleGroupResourceMod
 		infra.Models = append(infra.Models, item)
 	}
 
+	if plan.Provision != nil {
+		provision, ok := autoscaleGroupProvisionToAPI(ctx, plan.Provision, diags)
+		if !ok {
+			return infra, cycle.AutoScaleGroupScale{}, false
+		}
+		infra.Provision = provision
+	}
+
 	scale := cycle.AutoScaleGroupScale{}
 	if plan.Scale != nil && plan.Scale.Up != nil && !plan.Scale.Up.Maximum.IsNull() && !plan.Scale.Up.Maximum.IsUnknown() {
 		maximum := int(plan.Scale.Up.Maximum.ValueInt64())
@@ -435,6 +502,83 @@ func autoscaleGroupResourceModelFromAPI(ctx context.Context, model *autoscaleGro
 	model.State = types.StringValue(string(group.State.Current))
 	model.Infrastructure = autoscaleGroupInfrastructureFromAPI(ctx, group.Infrastructure, diags)
 	model.Scale = autoscaleGroupScaleFromAPI(group.Scale)
+	// Leave an omitted provision block null. Adopting Cycle's defaults would
+	// plan a perpetual diff against config that never set the block.
+	if model.Provision != nil {
+		if got := autoscaleGroupProvisionFromAPI(ctx, group.Infrastructure.Provision, diags); got != nil {
+			model.Provision = got
+		}
+	}
+}
+
+func autoscaleGroupProvisionToAPI(ctx context.Context, plan *autoscaleGroupProvisionModel, diags *diag.Diagnostics) (*cycle.AutoScaleGroupProvision, bool) {
+	tags := []string{}
+	if !plan.Tags.IsNull() && !plan.Tags.IsUnknown() {
+		diags.Append(plan.Tags.ElementsAs(ctx, &tags, false)...)
+		if diags.HasError() {
+			return nil, false
+		}
+		if tags == nil {
+			tags = []string{}
+		}
+	}
+
+	constraints := &cycle.ServerConstraints{Tags: tags}
+	constraints.Allow.Overcommit = plan.Overcommit.ValueBool()
+	constraints.Allow.Pool = plan.Pool.ValueBool()
+	constraints.Allow.Services = plan.Services.ValueBool()
+	if !plan.OvercommitMultiple.IsNull() && !plan.OvercommitMultiple.IsUnknown() {
+		multiple := int(plan.OvercommitMultiple.ValueInt64())
+		constraints.Allow.OvercommitMultiple = &multiple
+	}
+
+	provision := &cycle.AutoScaleGroupProvision{Constraints: constraints}
+	volumeSet := !plan.BaseVolumeGb.IsNull() && !plan.BaseVolumeGb.IsUnknown()
+	sftpSet := !plan.Sftp.IsNull() && !plan.Sftp.IsUnknown()
+	if volumeSet || sftpSet {
+		features := &cycle.ServerFeatures{}
+		if !plan.BaseVolumeGb.IsNull() && !plan.BaseVolumeGb.IsUnknown() {
+			gb := int(plan.BaseVolumeGb.ValueInt64())
+			features.BaseVolumeGb = &gb
+		}
+		if !plan.Sftp.IsNull() && !plan.Sftp.IsUnknown() {
+			features.Sftp = plan.Sftp.ValueBool()
+		}
+		provision.Features = features
+	}
+	return provision, true
+}
+
+func autoscaleGroupProvisionFromAPI(ctx context.Context, provision *cycle.AutoScaleGroupProvision, diags *diag.Diagnostics) *autoscaleGroupProvisionModel {
+	if provision == nil || provision.Constraints == nil {
+		return nil
+	}
+	tags := provision.Constraints.Tags
+	if tags == nil {
+		tags = []string{}
+	}
+	tagList, tagDiags := types.ListValueFrom(ctx, types.StringType, tags)
+	diags.Append(tagDiags...)
+
+	model := &autoscaleGroupProvisionModel{
+		Overcommit:         types.BoolValue(provision.Constraints.Allow.Overcommit),
+		OvercommitMultiple: types.Int64Null(),
+		Pool:               types.BoolValue(provision.Constraints.Allow.Pool),
+		Services:           types.BoolValue(provision.Constraints.Allow.Services),
+		Tags:               tagList,
+		BaseVolumeGb:       types.Int64Null(),
+		Sftp:               types.BoolNull(),
+	}
+	if provision.Constraints.Allow.OvercommitMultiple != nil {
+		model.OvercommitMultiple = types.Int64Value(int64(*provision.Constraints.Allow.OvercommitMultiple))
+	}
+	if provision.Features != nil {
+		if provision.Features.BaseVolumeGb != nil {
+			model.BaseVolumeGb = types.Int64Value(int64(*provision.Features.BaseVolumeGb))
+		}
+		model.Sftp = types.BoolValue(provision.Features.Sftp)
+	}
+	return model
 }
 
 func autoscaleGroupInfrastructureFromAPI(ctx context.Context, infra cycle.AutoScaleGroupInfrastructure, diags *diag.Diagnostics) []autoscaleGroupInfrastructureModel {

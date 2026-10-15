@@ -28,4 +28,16 @@ resource "cycle_autoscale_group" "workers" {
       min_ttl           = "24h"
     }
   }
+
+  # Applied to every server this group creates. encrypt_storage is not
+  # available on the group API.
+  provision = {
+    overcommit          = true
+    overcommit_multiple = 15
+    pool                = true
+    services            = true
+    tags                = []
+    base_volume_gb      = 100
+    sftp                = false
+  }
 }
