@@ -1,6 +1,13 @@
 # Changelog
 
-## 0.1.3 (Unreleased)
+## 0.1.4 (Unreleased)
+
+`cycle_autoscale_group` accepts a `provision` block. It sets the placement
+constraints Cycle applies to servers the group creates: CPU overcommit and
+`overcommit_multiple`, pool and service placement, constraint tags, and the
+base volume size. The group API still has no `encrypt_storage` field.
+
+## 0.1.3
 
 When a provision job is garbage-collected, `cycle_server` no longer attaches
 every parallel create to the newest matching node. It keeps a server id from

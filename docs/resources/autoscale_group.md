@@ -3,12 +3,12 @@
 page_title: "cycle_autoscale_group Resource - cycle"
 subcategory: ""
 description: |-
-  Manages a Cycle auto-scale group (POST /v1/infrastructure/auto-scale/groups). The group describes which server models and locations Cycle may provision from, and the scale-up / scale-down bounds.
+  Manages a Cycle auto-scale group (POST /v1/infrastructure/auto-scale/groups). The group describes which server models and locations Cycle may provision from, the scale-up / scale-down bounds, and the placement constraints (including CPU overcommit) applied to servers the group creates.
 ---
 
 # cycle_autoscale_group (Resource)
 
-Manages a Cycle auto-scale group (`POST /v1/infrastructure/auto-scale/groups`). The group describes which server models and locations Cycle may provision from, and the scale-up / scale-down bounds.
+Manages a Cycle auto-scale group (`POST /v1/infrastructure/auto-scale/groups`). The group describes which server models and locations Cycle may provision from, the scale-up / scale-down bounds, and the placement constraints (including CPU overcommit) applied to servers the group creates.
 
 ## Example Usage
 
@@ -43,6 +43,16 @@ resource "cycle_autoscale_group" "workers" {
       min_ttl           = "24h"
     }
   }
+
+  provision = {
+    overcommit          = true
+    overcommit_multiple = 15
+    pool                = true
+    services            = true
+    tags                = []
+    base_volume_gb      = 100
+    sftp                = false
+  }
 }
 ```
 
@@ -56,6 +66,10 @@ resource "cycle_autoscale_group" "workers" {
 - `infrastructure` (Attributes List) Ordered list of server models Cycle may provision from. Lower `priority` values are preferred. (see [below for nested schema](#nestedatt--infrastructure))
 - `name` (String) A user-defined name for the auto-scale group.
 - `scale` (Attributes) Scale-up and scale-down bounds for the group. (see [below for nested schema](#nestedatt--scale))
+
+### Optional
+
+- `provision` (Attributes) Constraints and features Cycle applies to each server this group creates. Omitted, the group does not send provision constraints. Cycle has no encrypt_storage field on a group. (see [below for nested schema](#nestedatt--provision))
 
 ### Read-Only
 
@@ -117,6 +131,22 @@ Optional:
 - `inactivity_period` (String) How long after the last instance is deployed before a server is eligible for deletion.
 - `method` (String) Which server to remove first when scaling down. One of `fifo` or `lifo`.
 - `min_ttl` (String) Minimum time-to-live for a server provisioned by an autoscale event.
+
+<a id="nestedatt--provision"></a>
+### Nested Schema for `provision`
+
+Required:
+
+- `overcommit` (Boolean) Allow containers to reserve more CPU shares than the server has physical threads. One thread is 10 shares.
+- `pool` (Boolean) Allow containers that specify no deployment tags to be placed on servers this group creates.
+- `services` (Boolean) Allow environment service containers (discovery, load balancer, scheduler) to be placed on servers this group creates.
+
+Optional:
+
+- `base_volume_gb` (Number) Size in GB of the base volume where Cycle stores container images. Omit to leave Cycle's default.
+- `overcommit_multiple` (Number) How many times the server's CPU shares may be reserved. Cycle requires `overcommit` to be true when this is set. `15` allows 15× the physical shares.
+- `sftp` (Boolean) Accept incoming SFTP connections through the remote volume integration. Sent only when `base_volume_gb` or `sftp` is set.
+- `tags` (List of String) Constraint tags Cycle puts on servers this group creates. An empty list sends no extra tags. Cycle may still add provider tags such as `aws` after provision.
 
 ## Import
 
